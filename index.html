@@ -202,6 +202,13 @@ footer{text-align:center;font-size:12px;color:var(--muted);padding:24px 0 0}
   <div id="appList"><p class="empty">Пока нет подписанных приложений.</p></div>
 </section>
 
+<section class="card">
+  <h2>Диагностика</h2>
+  <p class="hint">Если окно установки не появляется — нажмите кнопку и пришлите текст ниже.</p>
+  <button class="btn btn-ghost btn-small" id="diagBtn">Проверить сервер</button>
+  <p class="meta" id="diagOut" style="margin-top:10px;white-space:pre-wrap;word-break:break-all"></p>
+</section>
+
 <div class="note">
   <p><b>Как это работает.</b> Выбранный .ipa загружается в хранилище вашего проекта на Vercel, и iOS сразу показывает своё окно «Установить «Имя»?» — без ссылок и компьютера.</p>
   <ol>
@@ -289,12 +296,30 @@ function loadVercelApps(){
     .catch(function(){ loadRepoApps(); });
 }
 
+var CDNS = [
+  "https://esm.sh/@vercel/blob@2/client",
+  "https://cdn.jsdelivr.net/npm/@vercel/blob@2/+esm",
+  "https://unpkg.com/@vercel/blob@2/dist/index.js"
+];
+function loadBlobSdk(){
+  var i = 0;
+  function tryNext(){
+    if (i >= CDNS.length) return Promise.reject(new Error("нет доступа к библиотеке загрузки"));
+    var u = CDNS[i++];
+    return import(u).then(function(m){
+      if (m && typeof m.upload === "function") return m;
+      if (m && m.default && typeof m.default.upload === "function") return m.default;
+      return tryNext();
+    }).catch(function(){ return tryNext(); });
+  }
+  return tryNext();
+}
 function uploadIpa(file){
   var bar = $("upBar"), fill = $("upFill"), meta = $("upMeta");
   bar.hidden = false; meta.hidden = false;
   fill.style.width = "2%";
   meta.textContent = "Загрузка на сервер… 0%";
-  return import("https://esm.sh/@vercel/blob@2/client").then(function(mod){
+  return loadBlobSdk().then(function(mod){
     return mod.upload(file.name, file, {
       access: "public",
       handleUploadUrl: "/api/upload",
@@ -500,9 +525,15 @@ function showFallback(url){
 function install(item){
   var m = mode();
   if (canOta(item)){
+    var meta = $("installMeta");
+    meta.hidden = false;
+    meta.textContent = "Открываем окно установки iOS… Если оно не появилось — нажмите кнопку выше ещё раз.";
     location.href = otaUrl(item);
     showFallback(item.url);
     return;
+  }
+  if (item.url && location.protocol !== "https:"){
+    alert("Нужен https: откройте сайт по адресу Vercel.");
   }
   if (m === "ota" && item.url && location.protocol !== "https:"){
     alert("Прямая установка работает только с размещённого сайта по https (например на Vercel).");
@@ -648,6 +679,34 @@ if (!trollOk){
   $("iosNote").hidden = false;
   if (S.cert && S.cert.installer === "trollstore"){ S.cert.installer = "auto"; save(); }
 }
+window.addEventListener("error", function(e){
+  var m = $("upMeta");
+  if (m){ m.hidden = false; m.textContent = "Ошибка страницы: " + (e.message || ""); }
+});
+$("diagBtn").onclick = function(){
+  var out = $("diagOut");
+  var lines = [];
+  lines.push("Протокол: " + location.protocol);
+  lines.push("iOS: " + (iosVer || "?"));
+  out.textContent = lines.join("\n") + "\nПроверка…";
+  fetch("/api/list", { cache: "no-store" }).then(function(r){
+    return r.text().then(function(t){ return { st: r.status, t: t.slice(0, 200) }; });
+  }).then(function(a){
+    lines.push("/api/list → " + a.st + " " + a.t);
+  }).catch(function(e){
+    lines.push("/api/list → ошибка " + ((e && e.message) || ""));
+  }).then(function(){
+    return fetch("/api/upload", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" })
+      .then(function(r){ return r.text().then(function(t){ return { st: r.status, t: t.slice(0, 200) }; }); })
+      .then(function(a){ lines.push("/api/upload → " + a.st + " " + a.t); })
+      .catch(function(e){ lines.push("/api/upload → ошибка " + ((e && e.message) || "")); });
+  }).then(function(){
+    return loadBlobSdk().then(function(){ lines.push("библиотека загрузки: ок"); })
+      .catch(function(e){ lines.push("библиотека загрузки: ОШИБКА " + ((e && e.message) || "")); });
+  }).then(function(){
+    out.textContent = lines.join("\n");
+  });
+};
 $("repoRefresh").onclick = loadVercelApps;
 loadVercelApps();
 renderCert();
