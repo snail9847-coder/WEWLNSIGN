@@ -108,17 +108,17 @@ footer{text-align:center;font-size:12px;color:var(--muted);padding:24px 0 0}
 </header>
 
 <div class="note" id="iosNote" hidden style="margin-bottom:16px">
-  <p><b>На вашей iOS нужен установщик.</b> <span id="iosVerText"></span> TrollStore не работает, поэтому неподписанный IPA подписывает приложение-установщик на самом iPhone:</p>
+  <p><b>На вашей iOS нужен установщик.</b> <span id="iosVerText"></span> TrollStore не работает, поэтому IPA подписывает приложение-установщик на самом iPhone. Поставьте его один раз:</p>
   <ol>
     <li><b>ESign</b> — ставится без компьютера, подписывает загруженным сертификатом.</li>
     <li><b>SideStore</b> — бесплатно вашим Apple ID, 7 дней; нужна однократная настройка pairing-файла с компьютера.</li>
   </ol>
-  <p style="margin:8px 0 0">Если IPA уже подписан — установщик не нужен, работает прямая установка.</p>
+  <p style="margin:8px 0 0">После установки возвращайтесь сюда — сайт откроет установщик в одно нажатие.</p>
 </div>
 
 <section class="card">
   <h2>Сертификат Apple ID</h2>
-  <p class="hint">Подпись выполняется на самом iPhone. Оставьте «Авто» — сайт сам подберёт способ установки.</p>
+  <p class="hint">Подпись выполняется на самом iPhone. Оставьте «Авто» — сайт сам подберёт установщик, который есть на устройстве.</p>
   <label for="appleId">Apple ID (необязательно)</label>
   <input id="appleId" type="email" inputmode="email" placeholder="name@example.com">
   <label for="installer">Способ установки</label>
@@ -139,15 +139,8 @@ footer{text-align:center;font-size:12px;color:var(--muted);padding:24px 0 0}
 </section>
 
 <section class="card">
-  <h2>Файлы из репозитория</h2>
-  <p class="hint">Перекиньте .ipa в папку <b>ipa/</b> в GitHub-репозитории — файл появится здесь сам и ставится в одно нажатие.</p>
-  <div id="repoList"><p class="empty">Загрузка списка…</p></div>
-  <button class="btn btn-ghost btn-small" id="repoRefresh" style="margin-top:4px">Обновить список</button>
-</section>
-
-<section class="card">
   <h2>Загрузка IPA</h2>
-  <p class="hint">Выберите файл с устройства или вставьте прямую ссылку на .ipa.</p>
+  <p class="hint">Выберите .ipa с телефона — файл загрузится на ваш сервер Vercel, и iOS предложит установку.</p>
   <label class="drop" id="drop" for="ipa" tabindex="0">
     <span class="big">Выбрать IPA файл</span>
     <span class="small">или перетащите файл сюда</span>
@@ -157,10 +150,21 @@ footer{text-align:center;font-size:12px;color:var(--muted);padding:24px 0 0}
     <span class="name" id="fileName">app.ipa</span>
     <span class="size" id="fileSize">0 МБ</span>
   </div>
-  <div class="or">или</div>
-  <label for="ipaUrl">Ссылка на IPA</label>
-  <input id="ipaUrl" type="url" inputmode="url" placeholder="https://…/app.ipa">
-  <button class="btn btn-primary" id="signBtn" disabled>Подписать и установить</button>
+  <div class="bar" id="upBar" hidden style="margin-top:14px"><span id="upFill"></span></div>
+  <p class="meta" id="upMeta" hidden style="margin-top:8px"></p>
+  <button class="btn btn-primary" id="signBtn" disabled>Загрузить и установить</button>
+  <div id="urlBox" hidden>
+    <div class="or">или</div>
+    <label for="ipaUrl">Ссылка на IPA</label>
+    <input id="ipaUrl" type="url" inputmode="url" placeholder="https://…/app.ipa">
+  </div>
+</section>
+
+<section class="card">
+  <h2>Мои загруженные IPA</h2>
+  <p class="hint">Все файлы, загруженные с телефона. Ставятся в одно нажатие в любой момент.</p>
+  <div id="repoList"><p class="empty">Загрузка списка…</p></div>
+  <button class="btn btn-ghost btn-small" id="repoRefresh" style="margin-top:4px">Обновить список</button>
 </section>
 
 <section class="card" id="processCard" hidden>
@@ -177,7 +181,7 @@ footer{text-align:center;font-size:12px;color:var(--muted);padding:24px 0 0}
   <button class="btn btn-primary" id="installBtn" hidden style="margin-top:16px">Установить на iPhone</button>
   <p class="meta" id="installMeta" hidden style="margin-top:10px"></p>
   <div id="fallback" hidden style="margin-top:12px">
-    <p class="meta" style="margin-bottom:8px">Не открылось? Попробуйте другой способ:</p>
+    <p class="meta" style="margin-bottom:8px">Не открылось? Попробуйте конкретный установщик:</p>
     <div id="fallbackBtns"></div>
   </div>
 </section>
@@ -199,10 +203,9 @@ footer{text-align:center;font-size:12px;color:var(--muted);padding:24px 0 0}
 </section>
 
 <div class="note">
-  <p><b>Как это работает.</b> Сайт ведёт учёт подписей и сам запускает установку. Ни пароли, ни файлы никуда не отправляются.</p>
+  <p><b>Как это работает.</b> Выбранный .ipa загружается в хранилище вашего проекта на Vercel, а затем iOS ставит его напрямую — без ссылок и компьютера.</p>
   <ol>
-    <li><b>Перекиньте .ipa в папку ipa/ репозитория</b> — файл сам появится на сайте после деплоя Vercel, ссылки вставлять не надо.</li>
-    <li><b>Прямая установка (OTA).</b> iOS сама покажет уведомление «Установить «Имя»?» и поставит приложение на главный экран. Работает на любой iOS, если IPA уже подписан.</li>
+    <li><b>Прямая установка (OTA).</b> После загрузки iOS сама показывает уведомление «Установить «Имя»?» и ставит приложение на главный экран. Работает на любой iOS, включая 26, если IPA подписан.</li>
     <li><b>TrollStore</b> — iOS 14–17.0: установка без срока действия.</li>
     <li><b>SideStore / AltStore / ESign</b> — если IPA не подписан: установщик подпишет его вашим Apple ID на 7 дней.</li>
   </ol>
@@ -247,7 +250,7 @@ function renderRepoList(items, err){
   if (!items.length){
     var p = document.createElement("p");
     p.className = "empty";
-    p.textContent = "В папке ipa/ пока нет файлов. Залейте туда .ipa через GitHub — Add file → Upload files.";
+    p.textContent = "Пока ничего не загружено. Выберите .ipa выше и нажмите «Загрузить и установить».";
     box.appendChild(p);
     return;
   }
@@ -266,12 +269,50 @@ function renderRepoList(items, err){
     var b = document.createElement("button");
     b.className = "btn btn-primary";
     b.textContent = "Установить «" + baseName(f.name) + "»";
-    b.onclick = function(){ runSign({ name: f.name, url: repoFileUrl(f.name) }); };
+    var url = f.url || repoFileUrl(f.name);
+    b.onclick = function(){ runSign({ name: f.name, url: url }); };
     row.appendChild(head);
     row.appendChild(b);
     box.appendChild(row);
   });
 }
+function loadVercelApps(){
+  var box = $("repoList");
+  box.innerHTML = "<p class=\"empty\">Загрузка списка…</p>";
+  fetch("/api/list", { cache: "no-store" })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      var items = (d && d.items) || [];
+      if (items.length){ renderRepoList(items, null); }
+      else { loadRepoApps(); }
+    })
+    .catch(function(){ loadRepoApps(); });
+}
+
+function uploadIpa(file){
+  var bar = $("upBar"), fill = $("upFill"), meta = $("upMeta");
+  bar.hidden = false; meta.hidden = false;
+  fill.style.width = "2%";
+  meta.textContent = "Загрузка на сервер… 0%";
+  return import("https://esm.sh/@vercel/blob@2/client").then(function(mod){
+    return mod.upload(file.name, file, {
+      access: "public",
+      handleUploadUrl: "/api/upload",
+      multipart: true,
+      contentType: "application/octet-stream",
+      onUploadProgress: function(p){
+        var pct = Math.max(2, Math.round(p.percentage || 0));
+        fill.style.width = pct + "%";
+        meta.textContent = "Загрузка на сервер… " + pct + "%";
+      }
+    });
+  }).then(function(blob){
+    fill.style.width = "100%";
+    meta.textContent = "Файл загружен на сервер.";
+    return blob.url;
+  });
+}
+
 function loadRepoApps(){
   var api = "https://api.github.com/repos/" + GH.owner + "/" + GH.repo +
     "/contents/" + GH.dir + "?ref=" + GH.branch;
@@ -289,7 +330,7 @@ function loadRepoApps(){
       renderRepoList(ipas);
     })
     .catch(function(){
-      renderRepoList([], "Не удалось получить список. Проверьте интернет или нажмите «Обновить список».");
+      renderRepoList([], "Пока ничего не загружено. Выберите .ipa выше и нажмите «Загрузить и установить».");
     });
 }
 
@@ -491,18 +532,31 @@ function install(item){
     a.click();
     return;
   }
-  alert("Файл не загружен в этой сессии. Выберите файл заново или укажите ссылку на IPA.");
+  alert("Файл не загружен в этой сессии. Выберите файл заново.");
 }
 
 $("signBtn").onclick = function(){
-  var url = $("ipaUrl").value.trim();
-  if (url){
-    var name = decodeURIComponent(url.split("?")[0].split("/").pop() || "app.ipa");
+  var urlField = $("ipaUrl") ? $("ipaUrl").value.trim() : "";
+  if (!S.file && urlField){
+    var name = decodeURIComponent(urlField.split("?")[0].split("/").pop() || "app.ipa");
     if (!/\.ipa$/i.test(name)) name = name + ".ipa";
-    runSign({ name: name, url: url });
-  } else if (S.file){
-    runSign({ name: S.file.name, url: "" });
+    runSign({ name: name, url: urlField });
+    return;
   }
+  if (!S.file) return;
+  var f = S.file, btn = $("signBtn");
+  btn.disabled = true;
+  uploadIpa(f).then(function(url){
+    btn.disabled = false;
+    loadVercelApps();
+    runSign({ name: f.name, url: url });
+  }).catch(function(e){
+    btn.disabled = false;
+    $("upBar").hidden = true;
+    $("upMeta").hidden = false;
+    $("upMeta").textContent = "Не удалось загрузить файл на сервер (" + ((e && e.message) || "ошибка") + "). Пробуем без сервера.";
+    runSign({ name: f.name, url: "" });
+  });
 };
 
 function isPerm(a){ return a.mode === "trollstore"; }
@@ -599,8 +653,8 @@ if (!trollOk){
   $("iosNote").hidden = false;
   if (S.cert && S.cert.installer === "trollstore"){ S.cert.installer = "auto"; save(); }
 }
-$("repoRefresh").onclick = loadRepoApps;
-loadRepoApps();
+$("repoRefresh").onclick = loadVercelApps;
+loadVercelApps();
 renderCert();
 render();
 setInterval(render, 60000);

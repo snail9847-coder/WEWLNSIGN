@@ -1,6 +1,4 @@
-# Папка для IPA
+Put your .ipa files here (optional fallback).
 
-Закиньте сюда файлы `.ipa` (GitHub → Add file → Upload files).
-После деплоя Vercel они автоматически появятся на сайте в блоке «Файлы из репозитория» с кнопкой «Установить».
-
-Лимит GitHub на один файл — 100 МБ.
+The main way is to upload the .ipa straight from the site on your iPhone —
+it goes into Vercel Blob storage and shows up in "Мои загруженные IPA".
