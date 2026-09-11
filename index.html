@@ -108,22 +108,22 @@ footer{text-align:center;font-size:12px;color:var(--muted);padding:24px 0 0}
 </header>
 
 <div class="note" id="iosNote" hidden style="margin-bottom:16px">
-  <p><b>На вашей iOS нужен установщик.</b> <span id="iosVerText"></span> TrollStore не работает, поэтому IPA подписывает приложение-установщик на самом iPhone. Поставьте его один раз:</p>
+  <p><b>На вашей iOS нужен установщик.</b> <span id="iosVerText"></span> TrollStore не работает, поэтому неподписанный IPA подписывает приложение-установщик на самом iPhone. Поставьте его один раз:</p>
   <ol>
     <li><b>ESign</b> — ставится без компьютера, подписывает загруженным сертификатом.</li>
     <li><b>SideStore</b> — бесплатно вашим Apple ID, 7 дней; нужна однократная настройка pairing-файла с компьютера.</li>
   </ol>
-  <p style="margin:8px 0 0">После установки возвращайтесь сюда — сайт откроет установщик в одно нажатие.</p>
+  <p style="margin:8px 0 0">Если IPA уже подписан — установщик не нужен, iOS поставит его сама.</p>
 </div>
 
 <section class="card">
   <h2>Сертификат Apple ID</h2>
-  <p class="hint">Подпись выполняется на самом iPhone. Оставьте «Авто» — сайт сам подберёт установщик, который есть на устройстве.</p>
+  <p class="hint">Подпись выполняется на самом iPhone. Оставьте «Авто» — сайт сам подберёт способ установки.</p>
   <label for="appleId">Apple ID (необязательно)</label>
   <input id="appleId" type="email" inputmode="email" placeholder="name@example.com">
   <label for="installer">Способ установки</label>
   <select id="installer">
-    <option value="auto">Авто (подобрать самому)</option>
+    <option value="auto">Авто (уведомление iOS)</option>
     <option value="ota">Прямая установка (уведомление iOS)</option>
     <option value="trollstore">TrollStore — без срока (iOS 14–17.0)</option>
     <option value="sidestore">SideStore — 7 дней</option>
@@ -140,7 +140,7 @@ footer{text-align:center;font-size:12px;color:var(--muted);padding:24px 0 0}
 
 <section class="card">
   <h2>Загрузка IPA</h2>
-  <p class="hint">Выберите .ipa с телефона — файл загрузится на ваш сервер Vercel, и iOS предложит установку.</p>
+  <p class="hint">Выберите .ipa с телефона — файл загрузится на ваш сервер Vercel, и iOS сразу спросит «Установить?».</p>
   <label class="drop" id="drop" for="ipa" tabindex="0">
     <span class="big">Выбрать IPA файл</span>
     <span class="small">или перетащите файл сюда</span>
@@ -203,9 +203,9 @@ footer{text-align:center;font-size:12px;color:var(--muted);padding:24px 0 0}
 </section>
 
 <div class="note">
-  <p><b>Как это работает.</b> Выбранный .ipa загружается в хранилище вашего проекта на Vercel, а затем iOS ставит его напрямую — без ссылок и компьютера.</p>
+  <p><b>Как это работает.</b> Выбранный .ipa загружается в хранилище вашего проекта на Vercel, и iOS сразу показывает своё окно «Установить «Имя»?» — без ссылок и компьютера.</p>
   <ol>
-    <li><b>Прямая установка (OTA).</b> После загрузки iOS сама показывает уведомление «Установить «Имя»?» и ставит приложение на главный экран. Работает на любой iOS, включая 26, если IPA подписан.</li>
+    <li><b>Прямая установка (OTA).</b> Нажмите «Установить» в окне iOS — иконка появится на главном экране. Работает на любой iOS, включая 26, если IPA подписан.</li>
     <li><b>TrollStore</b> — iOS 14–17.0: установка без срока действия.</li>
     <li><b>SideStore / AltStore / ESign</b> — если IPA не подписан: установщик подпишет его вашим Apple ID на 7 дней.</li>
   </ol>
@@ -270,7 +270,7 @@ function renderRepoList(items, err){
     b.className = "btn btn-primary";
     b.textContent = "Установить «" + baseName(f.name) + "»";
     var url = f.url || repoFileUrl(f.name);
-    b.onclick = function(){ runSign({ name: f.name, url: url }); };
+    b.onclick = function(){ install({ name: f.name, url: url }); };
     row.appendChild(head);
     row.appendChild(b);
     box.appendChild(row);
@@ -359,7 +359,7 @@ function save(){
 }
 function mode(){ return (S.cert && S.cert.installer) || $("installer").value || "auto"; }
 function modeName(m){
-  if (m === "auto") return "установщик";
+  if (m === "auto") return "уведомление iOS";
   if (m === "ota") return "прямая установка iOS";
   return SCHEMES[m].name;
 }
@@ -444,7 +444,7 @@ function runSign(item){
     i++;
     if (i >= 5){ clearInterval(t); setStep(4, true); finishSign(item); }
     else setStep(i, false);
-  }, 700);
+  }, 320);
 }
 function finishSign(item){
   var now = Date.now(), found = null, m = mode();
@@ -464,14 +464,15 @@ function finishSign(item){
   meta.hidden = false;
   if (item.url){
     btn.textContent = "Установить «" + baseName(item.name) + "»";
-    meta.textContent = canOta(item) && (m === "ota" || m === "auto")
-      ? "iOS покажет уведомление «Установить «" + baseName(item.name) + "»?» — нажмите «Установить», и иконка появится на главном экране."
+    meta.textContent = canOta(item)
+      ? "iOS показывает окно «Установить «" + baseName(item.name) + "»?» — нажмите «Установить», и иконка появится на главном экране. Не появилось — нажмите кнопку выше."
       : "Откроется " + modeName(m) + ": он скачает IPA, подпишет и установит приложение.";
   } else {
     btn.textContent = "Передать IPA в установщик";
     meta.textContent = "В меню «Поделиться» выберите установщик — он подпишет и установит файл.";
   }
   btn.onclick = function(){ install(item); };
+  if (canOta(item)){ setTimeout(function(){ install(item); }, 250); }
 }
 
 function openScheme(key, url){
@@ -498,7 +499,7 @@ function showFallback(url){
 }
 function install(item){
   var m = mode();
-  if ((m === "ota" || m === "auto") && canOta(item)){
+  if (canOta(item)){
     location.href = otaUrl(item);
     showFallback(item.url);
     return;
@@ -630,18 +631,12 @@ function render(){
 
     var b1 = document.createElement("button");
     b1.className = "btn " + (!perm && n <= 0 ? "btn-primary" : "btn-ghost");
-    b1.textContent = perm ? "Установить заново" : (n <= 0 ? "Подписать заново" : "Переподписать сейчас");
-    b1.onclick = function(){ runSign({ name: a.name, url: a.url }); };
-
-    var b2 = document.createElement("button");
-    b2.className = "btn btn-ghost";
-    b2.textContent = "Установить";
-    b2.onclick = function(){ install(a); };
+    b1.textContent = "Установить «" + baseName(a.name) + "»";
+    b1.onclick = function(){ install(a); };
 
     box.appendChild(row);
     box.appendChild(meta);
     box.appendChild(b1);
-    box.appendChild(b2);
     list.appendChild(box);
   });
 }
