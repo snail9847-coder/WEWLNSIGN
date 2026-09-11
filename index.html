@@ -51,6 +51,7 @@ input:focus-visible,button:focus-visible,select:focus-visible,.drop:focus-visibl
 .btn-primary{background:var(--blue);color:#fff}
 .btn-primary[disabled]{opacity:.45;cursor:default}
 .btn-ghost{background:var(--soft);color:var(--text);border-color:var(--border)}
+.btn-small{min-height:40px;font-size:14px}
 .btn+.btn{margin-top:8px}
 .drop{display:block;width:100%;border:1px dashed var(--border);background:var(--soft);
   border-radius:12px;padding:24px 16px;text-align:center;cursor:pointer}
@@ -91,7 +92,6 @@ input:focus-visible,button:focus-visible,select:focus-visible,.drop:focus-visibl
 .note p{margin:0 0 8px}
 .note ol{margin:0;padding-left:18px}
 .note li+li{margin-top:4px}
-code{font-family:Menlo,Consolas,monospace;font-size:12px;background:var(--border);padding:1px 5px;border-radius:4px}
 footer{text-align:center;font-size:12px;color:var(--muted);padding:24px 0 0}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -109,20 +109,23 @@ footer{text-align:center;font-size:12px;color:var(--muted);padding:24px 0 0}
 
 <section class="card">
   <h2>Сертификат Apple ID</h2>
-  <p class="hint">Сертификат берётся из вашего Apple ID на самом iPhone — через установщик SideStore или AltStore.</p>
-  <label for="appleId">Apple ID</label>
+  <p class="hint">Подпись выполняется на самом iPhone. Оставьте «Авто» — сайт сам подберёт установщик, который есть на устройстве.</p>
+  <label for="appleId">Apple ID (необязательно)</label>
   <input id="appleId" type="email" inputmode="email" placeholder="name@example.com">
-  <label for="installer">Установщик на iPhone</label>
+  <label for="installer">Способ установки</label>
   <select id="installer">
-    <option value="sidestore">SideStore</option>
-    <option value="altstore">AltStore</option>
+    <option value="auto">Авто (подобрать самому)</option>
+    <option value="trollstore">TrollStore — без срока (iOS 14–17.0)</option>
+    <option value="sidestore">SideStore — 7 дней</option>
+    <option value="altstore">AltStore — 7 дней</option>
+    <option value="esign">ESign — свой сертификат</option>
   </select>
   <div class="row">
-    <span class="meta">Статус сертификата</span>
-    <span class="pill idle" id="certPill">не подключён</span>
+    <span class="meta">Статус</span>
+    <span class="pill idle" id="certPill">не настроено</span>
   </div>
-  <button class="btn btn-primary" id="certBtn">Подключить сертификат</button>
-  <button class="btn btn-ghost" id="certReset" hidden>Отключить</button>
+  <button class="btn btn-primary" id="certBtn">Сохранить и продолжить</button>
+  <button class="btn btn-ghost" id="certReset" hidden>Сбросить</button>
 </section>
 
 <section class="card">
@@ -149,18 +152,22 @@ footer{text-align:center;font-size:12px;color:var(--muted);padding:24px 0 0}
   <div class="bar"><span id="barFill"></span></div>
   <ul class="steps" id="steps">
     <li><span class="dot">1</span><span>Проверка IPA</span></li>
-    <li><span class="dot">2</span><span>Проверка сертификата Apple ID</span></li>
+    <li><span class="dot">2</span><span>Проверка сертификата</span></li>
     <li><span class="dot">3</span><span>Подготовка подписи</span></li>
     <li><span class="dot">4</span><span>Передача в установщик</span></li>
     <li><span class="dot">5</span><span>Установка на iPhone</span></li>
   </ul>
   <button class="btn btn-primary" id="installBtn" hidden style="margin-top:16px">Установить на iPhone</button>
   <p class="meta" id="installMeta" hidden style="margin-top:10px"></p>
+  <div id="fallback" hidden style="margin-top:12px">
+    <p class="meta" style="margin-bottom:8px">Не открылось? Попробуйте конкретный установщик:</p>
+    <div id="fallbackBtns"></div>
+  </div>
 </section>
 
 <section class="card">
   <h2>Срок действия подписи</h2>
-  <p class="hint">Бесплатная подпись действует 7 дней. После этого приложение нужно подписать заново.</p>
+  <p class="hint">Бесплатная подпись действует 7 дней. Через TrollStore подпись бессрочная.</p>
   <div class="row">
     <div class="days" id="daysLeft">0<small id="daysWord">дней осталось</small></div>
     <span class="pill idle" id="expPill">нет подписей</span>
@@ -175,11 +182,11 @@ footer{text-align:center;font-size:12px;color:var(--muted);padding:24px 0 0}
 </section>
 
 <div class="note">
-  <p><b>Как это работает без сервера.</b> Подпись выполняет сам iPhone вашим сертификатом Apple ID через SideStore/AltStore. Сайт передаёт в установщик IPA и ведёт счёт 7 дней — ни паролей, ни сертификатов никуда не отправляется.</p>
+  <p><b>Как это работает.</b> Сайт полностью статический: он передаёт IPA тому установщику, который есть на iPhone, и ведёт счёт 7 дней. Ни пароли, ни файлы никуда не отправляются.</p>
   <ol>
-    <li>На iPhone установлен SideStore или AltStore с вашим Apple ID.</li>
-    <li>Ссылка на IPA — установщик скачает и подпишет его сам.</li>
-    <li>Локальный файл — кнопка «Поделиться» откроет IPA в установщике.</li>
+    <li>iOS 14–17.0 и есть TrollStore — установка в одно нажатие и без срока действия.</li>
+    <li>Остальные версии iOS — SideStore, AltStore или ESign с вашим Apple ID, подпись на 7 дней.</li>
+    <li>Ссылка на IPA — установщик скачает и подпишет файл сам; локальный файл — через кнопку «Поделиться».</li>
   </ol>
 </div>
 
@@ -188,6 +195,13 @@ footer{text-align:center;font-size:12px;color:var(--muted);padding:24px 0 0}
 
 <script>
 var DAY = 86400000, WEEK = 7 * DAY;
+var SCHEMES = {
+  trollstore: { name: "TrollStore", url: "apple-magnifier://install?url=", perm: true },
+  sidestore: { name: "SideStore", url: "sidestore://install?url=", perm: false },
+  altstore: { name: "AltStore", url: "altstore://install?url=", perm: false },
+  esign: { name: "ESign", url: "esign://install?url=", perm: false }
+};
+var AUTO_ORDER = ["trollstore", "sidestore", "altstore", "esign"];
 function $(id){ return document.getElementById(id); }
 
 var S = {
@@ -199,31 +213,28 @@ function save(){
   localStorage.setItem("wewln_cert", JSON.stringify(S.cert));
   localStorage.setItem("wewln_apps", JSON.stringify(S.apps));
 }
-
-function installerName(id){ return id === "altstore" ? "AltStore" : "SideStore"; }
-function currentInstaller(){ return (S.cert && S.cert.installer) || $("installer").value; }
+function mode(){ return (S.cert && S.cert.installer) || $("installer").value || "auto"; }
+function modeName(m){ return m === "auto" ? "установщик" : SCHEMES[m].name; }
 
 function renderCert(){
   var pill = $("certPill");
   if (S.cert){
-    $("appleId").value = S.cert.appleId;
+    $("appleId").value = S.cert.appleId || "";
     $("installer").value = S.cert.installer;
     pill.className = "pill ok";
-    pill.textContent = installerName(S.cert.installer);
-    $("certBtn").textContent = "Обновить сертификат";
+    pill.textContent = S.cert.installer === "auto" ? "авто" : SCHEMES[S.cert.installer].name;
+    $("certBtn").textContent = "Обновить настройки";
     $("certReset").hidden = false;
   } else {
     pill.className = "pill idle";
-    pill.textContent = "не подключён";
-    $("certBtn").textContent = "Подключить сертификат";
+    pill.textContent = "не настроено";
+    $("certBtn").textContent = "Сохранить и продолжить";
     $("certReset").hidden = true;
   }
   syncSignBtn();
 }
 $("certBtn").onclick = function(){
-  var id = $("appleId").value.trim();
-  if (!id){ $("appleId").focus(); return; }
-  S.cert = { appleId: id, installer: $("installer").value };
+  S.cert = { appleId: $("appleId").value.trim(), installer: $("installer").value };
   save(); renderCert();
 };
 $("certReset").onclick = function(){ S.cert = null; save(); renderCert(); };
@@ -241,8 +252,7 @@ function pickFile(f){
   syncSignBtn();
 }
 function syncSignBtn(){
-  var hasSource = !!S.file || !!$("ipaUrl").value.trim();
-  $("signBtn").disabled = !(hasSource && S.cert);
+  $("signBtn").disabled = !(S.file || $("ipaUrl").value.trim());
 }
 $("ipa").onchange = function(e){ pickFile(e.target.files[0]); };
 $("ipaUrl").oninput = syncSignBtn;
@@ -261,7 +271,7 @@ drop.addEventListener("keydown", function(e){
 
 var STEP_TEXT = [
   "Проверка IPA…",
-  "Проверка сертификата Apple ID…",
+  "Проверка сертификата…",
   "Подготовка подписи…",
   "Передача в установщик…",
   "Готово к установке"
@@ -278,6 +288,7 @@ function runSign(item){
   $("processCard").hidden = false;
   $("installBtn").hidden = true;
   $("installMeta").hidden = true;
+  $("fallback").hidden = true;
   setStep(0, false);
   $("processCard").scrollIntoView({ behavior: "smooth", block: "center" });
   var i = 0;
@@ -285,17 +296,17 @@ function runSign(item){
     i++;
     if (i >= 5){ clearInterval(t); setStep(4, true); finishSign(item); }
     else setStep(i, false);
-  }, 800);
+  }, 700);
 }
 function finishSign(item){
-  var now = Date.now(), found = null;
+  var now = Date.now(), found = null, m = mode();
   for (var k = 0; k < S.apps.length; k++){ if (S.apps[k].name === item.name) found = S.apps[k]; }
   if (found){
-    found.signed = now; found.expires = now + WEEK;
+    found.signed = now; found.expires = now + WEEK; found.mode = m;
     if (item.url) found.url = item.url;
     item = found;
   } else {
-    item = { name: item.name, url: item.url || "", signed: now, expires: now + WEEK };
+    item = { name: item.name, url: item.url || "", signed: now, expires: now + WEEK, mode: m };
     S.apps.unshift(item);
   }
   save(); render();
@@ -304,19 +315,44 @@ function finishSign(item){
   btn.hidden = false;
   meta.hidden = false;
   if (item.url){
-    btn.textContent = "Открыть в " + installerName(currentInstaller());
-    meta.textContent = installerName(currentInstaller()) + " скачает IPA, подпишет вашим сертификатом Apple ID и установит приложение.";
+    btn.textContent = "Установить на iPhone";
+    meta.textContent = "Откроется " + modeName(m) + ": он скачает IPA, подпишет и установит приложение.";
   } else {
-    btn.textContent = "Поделиться IPA с " + installerName(currentInstaller());
-    meta.textContent = "В меню «Поделиться» выберите " + installerName(currentInstaller()) + " — он подпишет и установит файл.";
+    btn.textContent = "Передать IPA в установщик";
+    meta.textContent = "В меню «Поделиться» выберите установщик — он подпишет и установит файл.";
   }
   btn.onclick = function(){ install(item); };
 }
 
+function openScheme(key, url){
+  location.href = SCHEMES[key].url + encodeURIComponent(url);
+}
+function showFallback(url){
+  var box = $("fallbackBtns");
+  box.innerHTML = "";
+  AUTO_ORDER.forEach(function(key){
+    var b = document.createElement("button");
+    b.className = "btn btn-ghost btn-small";
+    b.textContent = SCHEMES[key].name;
+    b.onclick = function(){ openScheme(key, url); };
+    box.appendChild(b);
+  });
+  $("fallback").hidden = false;
+}
 function install(item){
-  var app = currentInstaller();
+  var m = mode();
   if (item.url){
-    location.href = app + "://install?url=" + encodeURIComponent(item.url);
+    if (m === "auto"){
+      var i = 0;
+      (function next(){
+        if (i >= AUTO_ORDER.length || document.visibilityState !== "visible"){ return; }
+        openScheme(AUTO_ORDER[i++], item.url);
+        setTimeout(next, 1500);
+      })();
+    } else {
+      openScheme(m, item.url);
+    }
+    showFallback(item.url);
     return;
   }
   if (S.file && S.file.name === item.name && navigator.canShare && navigator.canShare({ files: [S.file] })){
@@ -344,6 +380,7 @@ $("signBtn").onclick = function(){
   }
 };
 
+function isPerm(a){ return a.mode === "trollstore"; }
 function daysLeft(a){ return Math.ceil((a.expires - Date.now()) / DAY); }
 function wordDays(n){
   var a = Math.abs(n) % 100, b = a % 10;
@@ -358,13 +395,19 @@ function dateStr(ms){
 
 function render(){
   var pill = $("expPill"), d = $("daysLeft"), w = $("daysWord");
+  var temp = S.apps.filter(function(a){ return !isPerm(a); });
   if (!S.apps.length){
     d.textContent = "0"; d.appendChild(w);
     w.textContent = "дней осталось";
     pill.className = "pill idle"; pill.textContent = "нет подписей";
     $("expMeta").textContent = "Подпишите первый IPA, чтобы увидеть дату окончания.";
+  } else if (!temp.length){
+    d.textContent = "∞"; d.appendChild(w);
+    w.textContent = "без срока";
+    pill.className = "pill ok"; pill.textContent = "TrollStore";
+    $("expMeta").textContent = "Приложения установлены бессрочно — переподписывать не нужно.";
   } else {
-    var latest = S.apps.slice().sort(function(a, b){ return b.expires - a.expires; })[0];
+    var latest = temp.slice().sort(function(a, b){ return b.expires - a.expires; })[0];
     var n = daysLeft(latest);
     d.textContent = n > 0 ? String(n) : "0";
     d.appendChild(w);
@@ -387,7 +430,7 @@ function render(){
     return;
   }
   S.apps.forEach(function(a){
-    var n = daysLeft(a);
+    var perm = isPerm(a), n = daysLeft(a);
     var box = document.createElement("div");
     box.className = "app";
 
@@ -397,18 +440,18 @@ function render(){
     t.className = "title";
     t.textContent = baseName(a.name);
     var st = document.createElement("span");
-    st.className = "pill " + (n <= 0 ? "bad" : (n <= 2 ? "warn" : "ok"));
-    st.textContent = n <= 0 ? "истекла" : n + " " + wordDays(n);
+    st.className = "pill " + (perm ? "ok" : (n <= 0 ? "bad" : (n <= 2 ? "warn" : "ok")));
+    st.textContent = perm ? "без срока" : (n <= 0 ? "истекла" : n + " " + wordDays(n));
     row.appendChild(t); row.appendChild(st);
 
     var meta = document.createElement("p");
     meta.className = "meta";
     meta.style.margin = "0 0 12px";
-    meta.textContent = "Подписано " + dateStr(a.signed) + " · до " + dateStr(a.expires) + (a.url ? " · по ссылке" : " · локальный файл");
+    meta.textContent = "Установлено " + dateStr(a.signed) + " · " + (perm ? "TrollStore, бессрочно" : "до " + dateStr(a.expires));
 
     var b1 = document.createElement("button");
-    b1.className = "btn " + (n <= 0 ? "btn-primary" : "btn-ghost");
-    b1.textContent = n <= 0 ? "Подписать заново" : "Переподписать сейчас";
+    b1.className = "btn " + (!perm && n <= 0 ? "btn-primary" : "btn-ghost");
+    b1.textContent = perm ? "Установить заново" : (n <= 0 ? "Подписать заново" : "Переподписать сейчас");
     b1.onclick = function(){ runSign({ name: a.name, url: a.url }); };
 
     var b2 = document.createElement("button");
