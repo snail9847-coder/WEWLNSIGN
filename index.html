@@ -43,9 +43,9 @@ header p{margin:2px 0 0;font-size:14px;color:var(--muted)}
 .card h2{margin:0 0 4px;font-size:17px}
 .hint{margin:0 0 16px;font-size:14px;color:var(--muted)}
 label{display:block;font-size:14px;font-weight:600;margin-bottom:6px}
-input[type=email],input[type=text]{width:100%;min-height:44px;padding:10px 12px;font-size:16px;
+input[type=email],input[type=text],input[type=url],select{width:100%;min-height:44px;padding:10px 12px;font-size:16px;
   color:var(--text);background:var(--soft);border:1px solid var(--border);border-radius:8px;margin-bottom:12px}
-input:focus-visible,button:focus-visible,.drop:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+input:focus-visible,button:focus-visible,select:focus-visible,.drop:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
 .btn{display:flex;align-items:center;justify-content:center;width:100%;min-height:48px;
   font:600 16px/1 inherit;border-radius:8px;border:1px solid transparent;cursor:pointer}
 .btn-primary{background:var(--blue);color:#fff}
@@ -53,7 +53,7 @@ input:focus-visible,button:focus-visible,.drop:focus-visible{outline:2px solid v
 .btn-ghost{background:var(--soft);color:var(--text);border-color:var(--border)}
 .btn+.btn{margin-top:8px}
 .drop{display:block;width:100%;border:1px dashed var(--border);background:var(--soft);
-  border-radius:12px;padding:28px 16px;text-align:center;cursor:pointer}
+  border-radius:12px;padding:24px 16px;text-align:center;cursor:pointer}
 .drop.over{border-color:var(--blue);background:var(--blue-soft)}
 .drop .big{display:block;font-size:15px;font-weight:600;margin-bottom:4px}
 .drop .small{display:block;font-size:13px;color:var(--muted);font-weight:400}
@@ -61,6 +61,8 @@ input:focus-visible,button:focus-visible,.drop:focus-visible{outline:2px solid v
   border:1px solid var(--border);border-radius:8px;font-size:14px}
 .file .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
 .file .size{color:var(--muted);font-size:13px;white-space:nowrap}
+.or{display:flex;align-items:center;gap:10px;margin:14px 0;font-size:12px;color:var(--muted)}
+.or:before,.or:after{content:"";flex:1;height:1px;background:var(--border)}
 .steps{list-style:none;margin:0;padding:0}
 .steps li{display:flex;gap:12px;align-items:flex-start;padding:10px 0;font-size:14px;color:var(--muted)}
 .steps li+li{border-top:1px solid var(--border)}
@@ -87,7 +89,7 @@ input:focus-visible,button:focus-visible,.drop:focus-visible{outline:2px solid v
   border:1px solid var(--border);border-radius:12px;padding:16px}
 .note b{color:var(--text)}
 .note p{margin:0 0 8px}
-.note ul{margin:0;padding-left:18px}
+.note ol{margin:0;padding-left:18px}
 .note li+li{margin-top:4px}
 code{font-family:Menlo,Consolas,monospace;font-size:12px;background:var(--border);padding:1px 5px;border-radius:4px}
 footer{text-align:center;font-size:12px;color:var(--muted);padding:24px 0 0}
@@ -107,11 +109,14 @@ footer{text-align:center;font-size:12px;color:var(--muted);padding:24px 0 0}
 
 <section class="card">
   <h2>Сертификат Apple ID</h2>
-  <p class="hint">Укажите Apple ID, к которому привязан сертификат подписи.</p>
+  <p class="hint">Сертификат берётся из вашего Apple ID на самом iPhone — через установщик SideStore или AltStore.</p>
   <label for="appleId">Apple ID</label>
   <input id="appleId" type="email" inputmode="email" placeholder="name@example.com">
-  <label for="certName">Название сертификата</label>
-  <input id="certName" type="text" placeholder="Free Apple Development">
+  <label for="installer">Установщик на iPhone</label>
+  <select id="installer">
+    <option value="sidestore">SideStore</option>
+    <option value="altstore">AltStore</option>
+  </select>
   <div class="row">
     <span class="meta">Статус сертификата</span>
     <span class="pill idle" id="certPill">не подключён</span>
@@ -122,7 +127,7 @@ footer{text-align:center;font-size:12px;color:var(--muted);padding:24px 0 0}
 
 <section class="card">
   <h2>Загрузка IPA</h2>
-  <p class="hint">Выберите любой файл с расширением .ipa.</p>
+  <p class="hint">Выберите файл с устройства или вставьте прямую ссылку на .ipa.</p>
   <label class="drop" id="drop" for="ipa" tabindex="0">
     <span class="big">Выбрать IPA файл</span>
     <span class="small">или перетащите файл сюда</span>
@@ -132,7 +137,10 @@ footer{text-align:center;font-size:12px;color:var(--muted);padding:24px 0 0}
     <span class="name" id="fileName">app.ipa</span>
     <span class="size" id="fileSize">0 МБ</span>
   </div>
-  <button class="btn btn-primary" id="signBtn" disabled style="margin-top:16px">Подписать и установить</button>
+  <div class="or">или</div>
+  <label for="ipaUrl">Ссылка на IPA</label>
+  <input id="ipaUrl" type="url" inputmode="url" placeholder="https://…/app.ipa">
+  <button class="btn btn-primary" id="signBtn" disabled>Подписать и установить</button>
 </section>
 
 <section class="card" id="processCard" hidden>
@@ -140,13 +148,14 @@ footer{text-align:center;font-size:12px;color:var(--muted);padding:24px 0 0}
   <p class="hint" id="processHint">Выполняется…</p>
   <div class="bar"><span id="barFill"></span></div>
   <ul class="steps" id="steps">
-    <li><span class="dot">1</span><span>Загрузка IPA</span></li>
-    <li><span class="dot">2</span><span>Проверка сертификата</span></li>
-    <li><span class="dot">3</span><span>Подпись приложения</span></li>
-    <li><span class="dot">4</span><span>Подготовка установки</span></li>
+    <li><span class="dot">1</span><span>Проверка IPA</span></li>
+    <li><span class="dot">2</span><span>Проверка сертификата Apple ID</span></li>
+    <li><span class="dot">3</span><span>Подготовка подписи</span></li>
+    <li><span class="dot">4</span><span>Передача в установщик</span></li>
     <li><span class="dot">5</span><span>Установка на iPhone</span></li>
   </ul>
   <button class="btn btn-primary" id="installBtn" hidden style="margin-top:16px">Установить на iPhone</button>
+  <p class="meta" id="installMeta" hidden style="margin-top:10px"></p>
 </section>
 
 <section class="card">
@@ -166,20 +175,19 @@ footer{text-align:center;font-size:12px;color:var(--muted);padding:24px 0 0}
 </section>
 
 <div class="note">
-  <p><b>Как это работает.</b> Файл IPA и данные сертификата остаются на вашем устройстве, установка на iPhone выполняется по ссылке <code>itms-services</code>.</p>
-  <ul>
-    <li>Для реальной подписи укажите адрес своего сервиса подписи в переменной <code>SIGN_ENDPOINT</code> в файле <code>index.html</code>. Пока она пустая, сайт работает в демо-режиме и показывает весь процесс и сроки.</li>
-    <li>Бесплатный сертификат Apple ID действует 7 дней — повторяйте подпись в разделе «Мои приложения».</li>
-  </ul>
+  <p><b>Как это работает без сервера.</b> Подпись выполняет сам iPhone вашим сертификатом Apple ID через SideStore/AltStore. Сайт передаёт в установщик IPA и ведёт счёт 7 дней — ни паролей, ни сертификатов никуда не отправляется.</p>
+  <ol>
+    <li>На iPhone установлен SideStore или AltStore с вашим Apple ID.</li>
+    <li>Ссылка на IPA — установщик скачает и подпишет его сам.</li>
+    <li>Локальный файл — кнопка «Поделиться» откроет IPA в установщике.</li>
+  </ol>
 </div>
 
 <footer>WEWLNSIGN · подпись IPA · 7 дней</footer>
 </div>
 
 <script>
-var SIGN_ENDPOINT = "";
 var DAY = 86400000, WEEK = 7 * DAY;
-
 function $(id){ return document.getElementById(id); }
 
 var S = {
@@ -192,13 +200,16 @@ function save(){
   localStorage.setItem("wewln_apps", JSON.stringify(S.apps));
 }
 
+function installerName(id){ return id === "altstore" ? "AltStore" : "SideStore"; }
+function currentInstaller(){ return (S.cert && S.cert.installer) || $("installer").value; }
+
 function renderCert(){
   var pill = $("certPill");
   if (S.cert){
     $("appleId").value = S.cert.appleId;
-    $("certName").value = S.cert.name;
+    $("installer").value = S.cert.installer;
     pill.className = "pill ok";
-    pill.textContent = "подключён";
+    pill.textContent = installerName(S.cert.installer);
     $("certBtn").textContent = "Обновить сертификат";
     $("certReset").hidden = false;
   } else {
@@ -212,7 +223,7 @@ function renderCert(){
 $("certBtn").onclick = function(){
   var id = $("appleId").value.trim();
   if (!id){ $("appleId").focus(); return; }
-  S.cert = { appleId: id, name: $("certName").value.trim() || "Free Apple Development" };
+  S.cert = { appleId: id, installer: $("installer").value };
   save(); renderCert();
 };
 $("certReset").onclick = function(){ S.cert = null; save(); renderCert(); };
@@ -229,9 +240,13 @@ function pickFile(f){
   $("fileRow").hidden = false;
   syncSignBtn();
 }
-function syncSignBtn(){ $("signBtn").disabled = !(S.file && S.cert); }
-
+function syncSignBtn(){
+  var hasSource = !!S.file || !!$("ipaUrl").value.trim();
+  $("signBtn").disabled = !(hasSource && S.cert);
+}
 $("ipa").onchange = function(e){ pickFile(e.target.files[0]); };
+$("ipaUrl").oninput = syncSignBtn;
+
 var drop = $("drop");
 ["dragenter","dragover"].forEach(function(t){
   drop.addEventListener(t, function(e){ e.preventDefault(); drop.classList.add("over"); });
@@ -245,10 +260,10 @@ drop.addEventListener("keydown", function(e){
 });
 
 var STEP_TEXT = [
-  "Загрузка IPA…",
+  "Проверка IPA…",
   "Проверка сертификата Apple ID…",
-  "Подпись приложения…",
-  "Подготовка установки…",
+  "Подготовка подписи…",
+  "Передача в установщик…",
   "Готово к установке"
 ];
 function setStep(i, done){
@@ -259,38 +274,75 @@ function setStep(i, done){
   $("barFill").style.width = Math.round(((done ? i + 1 : i) / li.length) * 100) + "%";
   $("processHint").textContent = STEP_TEXT[Math.min(i, STEP_TEXT.length - 1)];
 }
-function runSign(name){
+function runSign(item){
   $("processCard").hidden = false;
   $("installBtn").hidden = true;
+  $("installMeta").hidden = true;
   setStep(0, false);
   $("processCard").scrollIntoView({ behavior: "smooth", block: "center" });
   var i = 0;
   var t = setInterval(function(){
     i++;
-    if (i >= 5){ clearInterval(t); setStep(4, true); finishSign(name); }
+    if (i >= 5){ clearInterval(t); setStep(4, true); finishSign(item); }
     else setStep(i, false);
-  }, 900);
+  }, 800);
 }
-function finishSign(name){
+function finishSign(item){
   var now = Date.now(), found = null;
-  for (var k = 0; k < S.apps.length; k++){ if (S.apps[k].name === name) found = S.apps[k]; }
-  if (found){ found.signed = now; found.expires = now + WEEK; }
-  else { S.apps.unshift({ name: name, signed: now, expires: now + WEEK }); }
-  save(); render();
-  var btn = $("installBtn");
-  btn.hidden = false;
-  btn.textContent = "Установить " + baseName(name);
-  btn.onclick = function(){ install(name); };
-}
-function install(name){
-  if (SIGN_ENDPOINT){
-    location.href = "itms-services://?action=download-manifest&url=" +
-      encodeURIComponent(SIGN_ENDPOINT + "/manifest/" + encodeURIComponent(name) + ".plist");
+  for (var k = 0; k < S.apps.length; k++){ if (S.apps[k].name === item.name) found = S.apps[k]; }
+  if (found){
+    found.signed = now; found.expires = now + WEEK;
+    if (item.url) found.url = item.url;
+    item = found;
   } else {
-    alert("Демо-режим: сервис подписи не подключён. Укажите SIGN_ENDPOINT в index.html, чтобы установка началась на iPhone.");
+    item = { name: item.name, url: item.url || "", signed: now, expires: now + WEEK };
+    S.apps.unshift(item);
   }
+  save(); render();
+
+  var btn = $("installBtn"), meta = $("installMeta");
+  btn.hidden = false;
+  meta.hidden = false;
+  if (item.url){
+    btn.textContent = "Открыть в " + installerName(currentInstaller());
+    meta.textContent = installerName(currentInstaller()) + " скачает IPA, подпишет вашим сертификатом Apple ID и установит приложение.";
+  } else {
+    btn.textContent = "Поделиться IPA с " + installerName(currentInstaller());
+    meta.textContent = "В меню «Поделиться» выберите " + installerName(currentInstaller()) + " — он подпишет и установит файл.";
+  }
+  btn.onclick = function(){ install(item); };
 }
-$("signBtn").onclick = function(){ runSign(S.file.name); };
+
+function install(item){
+  var app = currentInstaller();
+  if (item.url){
+    location.href = app + "://install?url=" + encodeURIComponent(item.url);
+    return;
+  }
+  if (S.file && S.file.name === item.name && navigator.canShare && navigator.canShare({ files: [S.file] })){
+    navigator.share({ files: [S.file], title: item.name }).catch(function(){});
+    return;
+  }
+  if (S.file && S.file.name === item.name){
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(S.file);
+    a.download = item.name;
+    a.click();
+    return;
+  }
+  alert("Файл не загружен в этой сессии. Выберите файл заново или укажите ссылку на IPA.");
+}
+
+$("signBtn").onclick = function(){
+  var url = $("ipaUrl").value.trim();
+  if (url){
+    var name = decodeURIComponent(url.split("?")[0].split("/").pop() || "app.ipa");
+    if (!/\.ipa$/i.test(name)) name = name + ".ipa";
+    runSign({ name: name, url: url });
+  } else if (S.file){
+    runSign({ name: S.file.name, url: "" });
+  }
+};
 
 function daysLeft(a){ return Math.ceil((a.expires - Date.now()) / DAY); }
 function wordDays(n){
@@ -352,17 +404,17 @@ function render(){
     var meta = document.createElement("p");
     meta.className = "meta";
     meta.style.margin = "0 0 12px";
-    meta.textContent = "Подписано " + dateStr(a.signed) + " · до " + dateStr(a.expires);
+    meta.textContent = "Подписано " + dateStr(a.signed) + " · до " + dateStr(a.expires) + (a.url ? " · по ссылке" : " · локальный файл");
 
     var b1 = document.createElement("button");
     b1.className = "btn " + (n <= 0 ? "btn-primary" : "btn-ghost");
     b1.textContent = n <= 0 ? "Подписать заново" : "Переподписать сейчас";
-    b1.onclick = function(){ runSign(a.name); };
+    b1.onclick = function(){ runSign({ name: a.name, url: a.url }); };
 
     var b2 = document.createElement("button");
     b2.className = "btn btn-ghost";
     b2.textContent = "Установить";
-    b2.onclick = function(){ install(a.name); };
+    b2.onclick = function(){ install(a); };
 
     box.appendChild(row);
     box.appendChild(meta);
