@@ -117,6 +117,18 @@ footer{text-align:center;font-size:12px;color:var(--muted);padding:24px 0 0}
 </div>
 
 <section class="card">
+  <h2>Хранилище файлов</h2>
+  <p class="hint">Вставьте токен хранилища Vercel Blob один раз — после этого загрузка работает всегда. Токен хранится только в этом браузере.</p>
+  <label for="blobToken">Токен (vercel_blob_rw_…)</label>
+  <input id="blobToken" type="text" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="vercel_blob_rw_…">
+  <div class="row">
+    <span class="meta">Статус</span>
+    <span class="pill idle" id="tokenPill">не задан</span>
+  </div>
+  <button class="btn btn-primary" id="tokenBtn">Сохранить токен</button>
+</section>
+
+<section class="card">
   <h2>Сертификат Apple ID</h2>
   <p class="hint">Подпись выполняется на самом iPhone. Оставьте «Авто» — сайт сам подберёт способ установки.</p>
   <label for="appleId">Apple ID (необязательно)</label>
@@ -241,6 +253,17 @@ function $(id){ return document.getElementById(id); }
 
 var GH = { owner: "snail9847-coder", repo: "WEWLNSIGN", dir: "ipa", branch: "main" };
 
+var TOK = localStorage.getItem("wewln_blob_token") || "";
+function apiUrl(path){
+  if (!TOK) return path;
+  return path + (path.indexOf("?") > -1 ? "&" : "?") + "token=" + encodeURIComponent(TOK);
+}
+function renderToken(){
+  var pill = $("tokenPill");
+  $("blobToken").value = TOK;
+  if (TOK){ pill.className = "pill ok"; pill.textContent = "задан"; }
+  else { pill.className = "pill idle"; pill.textContent = "не задан"; }
+}
 function repoFileUrl(name){
   return location.origin + "/" + GH.dir + "/" + encodeURIComponent(name);
 }
@@ -286,7 +309,7 @@ function renderRepoList(items, err){
 function loadVercelApps(){
   var box = $("repoList");
   box.innerHTML = "<p class=\"empty\">Загрузка списка…</p>";
-  fetch("/api/list", { cache: "no-store" })
+  fetch(apiUrl("/api/list"), { cache: "no-store" })
     .then(function(r){ return r.json(); })
     .then(function(d){
       var items = (d && d.items) || [];
@@ -322,7 +345,7 @@ function uploadIpa(file){
   return loadBlobSdk().then(function(mod){
     return mod.upload(file.name, file, {
       access: "public",
-      handleUploadUrl: "/api/upload",
+      handleUploadUrl: apiUrl("/api/upload"),
       multipart: true,
       contentType: "application/octet-stream",
       onUploadProgress: function(p){
@@ -688,15 +711,16 @@ $("diagBtn").onclick = function(){
   var lines = [];
   lines.push("Протокол: " + location.protocol);
   lines.push("iOS: " + (iosVer || "?"));
+  lines.push("токен хранилища: " + (TOK ? "задан" : "нет"));
   out.textContent = lines.join("\n") + "\nПроверка…";
-  fetch("/api/list", { cache: "no-store" }).then(function(r){
+  fetch(apiUrl("/api/list"), { cache: "no-store" }).then(function(r){
     return r.text().then(function(t){ return { st: r.status, t: t.slice(0, 200) }; });
   }).then(function(a){
     lines.push("/api/list → " + a.st + " " + a.t);
   }).catch(function(e){
     lines.push("/api/list → ошибка " + ((e && e.message) || ""));
   }).then(function(){
-    return fetch("/api/upload", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" })
+    return fetch(apiUrl("/api/upload"), { method: "POST", headers: { "content-type": "application/json" }, body: "{}" })
       .then(function(r){ return r.text().then(function(t){ return { st: r.status, t: t.slice(0, 200) }; }); })
       .then(function(a){ lines.push("/api/upload → " + a.st + " " + a.t); })
       .catch(function(e){ lines.push("/api/upload → ошибка " + ((e && e.message) || "")); });
@@ -707,6 +731,13 @@ $("diagBtn").onclick = function(){
     out.textContent = lines.join("\n");
   });
 };
+$("tokenBtn").onclick = function(){
+  TOK = $("blobToken").value.trim();
+  localStorage.setItem("wewln_blob_token", TOK);
+  renderToken();
+  loadVercelApps();
+};
+renderToken();
 $("repoRefresh").onclick = loadVercelApps;
 loadVercelApps();
 renderCert();
