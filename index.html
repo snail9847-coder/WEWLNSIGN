@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>WEWLNSIGN — подпись и установка IPA</title>
+<link rel="icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+:root{
+  --bg:#fff;--soft:#f9f8f7;--surface:#fff;--border:#e6e5e3;
+  --text:#2c2c2b;--muted:#7d7a75;
+  --blue:#2783de;--blue-soft:#e5f2fc;
+  --green:#46a171;--green-soft:#e8f1ec;
+  --orange:#d5803b;--orange-soft:#fbebde;
+  --red:#e56458;--red-soft:#fce9e7;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#191919;--soft:#202020;--surface:#202020;--border:rgba(255,255,255,.2);
+    --text:#fff;--muted:rgba(255,255,255,.65);
+    --blue:#5e9fe8;--blue-soft:rgba(94,159,232,.14);
+    --green:#72bc8f;--green-soft:rgba(114,188,143,.14);
+    --orange:#de9255;--orange-soft:rgba(222,146,85,.14);
+    --red:#e97366;--red-soft:rgba(233,115,102,.14);
+  }
+}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);
+  font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  padding:max(16px,env(safe-area-inset-top)) 16px calc(32px + env(safe-area-inset-bottom))}
+.wrap{max-width:520px;margin:0 auto}
+header{display:flex;align-items:center;gap:12px;padding:8px 0 24px}
+.mark{width:44px;height:44px;flex:0 0 44px;border-radius:12px;background:var(--blue);color:#fff;
+  display:grid;place-items:center;font-weight:700;font-size:18px}
+h1{margin:0;font-size:20px;letter-spacing:-.3px}
+header p{margin:2px 0 0;font-size:14px;color:var(--muted)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px}
+.card h2{margin:0 0 4px;font-size:17px}
+.hint{margin:0 0 16px;font-size:14px;color:var(--muted)}
+label{display:block;font-size:14px;font-weight:600;margin-bottom:6px}
+input[type=email],input[type=text]{width:100%;min-height:44px;padding:10px 12px;font-size:16px;
+  color:var(--text);background:var(--soft);border:1px solid var(--border);border-radius:8px;margin-bottom:12px}
+input:focus-visible,button:focus-visible,.drop:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.btn{display:flex;align-items:center;justify-content:center;width:100%;min-height:48px;
+  font:600 16px/1 inherit;border-radius:8px;border:1px solid transparent;cursor:pointer}
+.btn-primary{background:var(--blue);color:#fff}
+.btn-primary[disabled]{opacity:.45;cursor:default}
+.btn-ghost{background:var(--soft);color:var(--text);border-color:var(--border)}
+.btn+.btn{margin-top:8px}
+.drop{display:block;width:100%;border:1px dashed var(--border);background:var(--soft);
+  border-radius:12px;padding:28px 16px;text-align:center;cursor:pointer}
+.drop.over{border-color:var(--blue);background:var(--blue-soft)}
+.drop .big{display:block;font-size:15px;font-weight:600;margin-bottom:4px}
+.drop .small{display:block;font-size:13px;color:var(--muted);font-weight:400}
+.file{display:flex;align-items:center;gap:10px;margin-top:12px;padding:12px;
+  border:1px solid var(--border);border-radius:8px;font-size:14px}
+.file .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.file .size{color:var(--muted);font-size:13px;white-space:nowrap}
+.steps{list-style:none;margin:0;padding:0}
+.steps li{display:flex;gap:12px;align-items:flex-start;padding:10px 0;font-size:14px;color:var(--muted)}
+.steps li+li{border-top:1px solid var(--border)}
+.steps .dot{flex:0 0 20px;height:20px;border-radius:50%;border:1px solid var(--border);
+  display:grid;place-items:center;font-size:11px;color:var(--muted);margin-top:1px}
+.steps li.active,.steps li.done{color:var(--text)}
+.steps li.active .dot{border-color:var(--blue);color:var(--blue)}
+.steps li.done .dot{background:var(--green);border-color:var(--green);color:#fff}
+.bar{height:6px;border-radius:6px;background:var(--soft);border:1px solid var(--border);overflow:hidden;margin:4px 0 8px}
+.bar span{display:block;height:100%;width:0;background:var(--blue);transition:width .3s ease}
+.pill{display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;font-size:13px;font-weight:600;white-space:nowrap}
+.pill.ok{background:var(--green-soft);color:var(--green)}
+.pill.warn{background:var(--orange-soft);color:var(--orange)}
+.pill.bad{background:var(--red-soft);color:var(--red)}
+.pill.idle{background:var(--soft);color:var(--muted)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.days{font-size:34px;font-weight:700;letter-spacing:-1px;line-height:1.1}
+.days small{display:block;font-size:14px;font-weight:600;color:var(--muted);letter-spacing:0}
+.meta{font-size:13px;color:var(--muted);margin:0}
+.app{border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px}
+.app .title{font-weight:600;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.empty{font-size:14px;color:var(--muted);margin:0}
+.note{font-size:13px;line-height:1.55;color:var(--muted);background:var(--soft);
+  border:1px solid var(--border);border-radius:12px;padding:16px}
+.note b{color:var(--text)}
+.note p{margin:0 0 8px}
+.note ul{margin:0;padding-left:18px}
+.note li+li{margin-top:4px}
+code{font-family:Menlo,Consolas,monospace;font-size:12px;background:var(--border);padding:1px 5px;border-radius:4px}
+footer{text-align:center;font-size:12px;color:var(--muted);padding:24px 0 0}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="mark" aria-hidden="true">W</div>
+  <div>
+    <h1>WEWLNSIGN</h1>
+    <p>Подпись и установка IPA на iPhone</p>
+  </div>
+</header>
+
+<section class="card">
+  <h2>Сертификат Apple ID</h2>
+  <p class="hint">Укажите Apple ID, к которому привязан сертификат подписи.</p>
+  <label for="appleId">Apple ID</label>
+  <input id="appleId" type="email" inputmode="email" placeholder="name@example.com">
+  <label for="certName">Название сертификата</label>
+  <input id="certName" type="text" placeholder="Free Apple Development">
+  <div class="row">
+    <span class="meta">Статус сертификата</span>
+    <span class="pill idle" id="certPill">не подключён</span>
+  </div>
+  <button class="btn btn-primary" id="certBtn">Подключить сертификат</button>
+  <button class="btn btn-ghost" id="certReset" hidden>Отключить</button>
+</section>
+
+<section class="card">
+  <h2>Загрузка IPA</h2>
+  <p class="hint">Выберите любой файл с расширением .ipa.</p>
+  <label class="drop" id="drop" for="ipa" tabindex="0">
+    <span class="big">Выбрать IPA файл</span>
+    <span class="small">или перетащите файл сюда</span>
+    <input id="ipa" type="file" accept=".ipa" hidden>
+  </label>
+  <div class="file" id="fileRow" hidden>
+    <span class="name" id="fileName">app.ipa</span>
+    <span class="size" id="fileSize">0 МБ</span>
+  </div>
+  <button class="btn btn-primary" id="signBtn" disabled style="margin-top:16px">Подписать и установить</button>
+</section>
+
+<section class="card" id="processCard" hidden>
+  <h2>Процесс подписи</h2>
+  <p class="hint" id="processHint">Выполняется…</p>
+  <div class="bar"><span id="barFill"></span></div>
+  <ul class="steps" id="steps">
+    <li><span class="dot">1</span><span>Загрузка IPA</span></li>
+    <li><span class="dot">2</span><span>Проверка сертификата</span></li>
+    <li><span class="dot">3</span><span>Подпись приложения</span></li>
+    <li><span class="dot">4</span><span>Подготовка установки</span></li>
+    <li><span class="dot">5</span><span>Установка на iPhone</span></li>
+  </ul>
+  <button class="btn btn-primary" id="installBtn" hidden style="margin-top:16px">Установить на iPhone</button>
+</section>
+
+<section class="card">
+  <h2>Срок действия подписи</h2>
+  <p class="hint">Бесплатная подпись действует 7 дней. После этого приложение нужно подписать заново.</p>
+  <div class="row">
+    <div class="days" id="daysLeft">0<small id="daysWord">дней осталось</small></div>
+    <span class="pill idle" id="expPill">нет подписей</span>
+  </div>
+  <p class="meta" id="expMeta">Подпишите первый IPA, чтобы увидеть дату окончания.</p>
+</section>
+
+<section class="card">
+  <h2>Мои приложения</h2>
+  <p class="hint">Переподписывайте приложения каждые 7 дней одной кнопкой.</p>
+  <div id="appList"><p class="empty">Пока нет подписанных приложений.</p></div>
+</section>
+
+<div class="note">
+  <p><b>Как это работает.</b> Файл IPA и данные сертификата остаются на вашем устройстве, установка на iPhone выполняется по ссылке <code>itms-services</code>.</p>
+  <ul>
+    <li>Для реальной подписи укажите адрес своего сервиса подписи в переменной <code>SIGN_ENDPOINT</code> в файле <code>index.html</code>. Пока она пустая, сайт работает в демо-режиме и показывает весь процесс и сроки.</li>
+    <li>Бесплатный сертификат Apple ID действует 7 дней — повторяйте подпись в разделе «Мои приложения».</li>
+  </ul>
+</div>
+
+<footer>WEWLNSIGN · подпись IPA · 7 дней</footer>
+</div>
+
+<script>
+var SIGN_ENDPOINT = "";
+var DAY = 86400000, WEEK = 7 * DAY;
+
+function $(id){ return document.getElementById(id); }
+
+var S = {
+  cert: JSON.parse(localStorage.getItem("wewln_cert") || "null"),
+  apps: JSON.parse(localStorage.getItem("wewln_apps") || "[]"),
+  file: null
+};
+function save(){
+  localStorage.setItem("wewln_cert", JSON.stringify(S.cert));
+  localStorage.setItem("wewln_apps", JSON.stringify(S.apps));
+}
+
+function renderCert(){
+  var pill = $("certPill");
+  if (S.cert){
+    $("appleId").value = S.cert.appleId;
+    $("certName").value = S.cert.name;
+    pill.className = "pill ok";
+    pill.textContent = "подключён";
+    $("certBtn").textContent = "Обновить сертификат";
+    $("certReset").hidden = false;
+  } else {
+    pill.className = "pill idle";
+    pill.textContent = "не подключён";
+    $("certBtn").textContent = "Подключить сертификат";
+    $("certReset").hidden = true;
+  }
+  syncSignBtn();
+}
+$("certBtn").onclick = function(){
+  var id = $("appleId").value.trim();
+  if (!id){ $("appleId").focus(); return; }
+  S.cert = { appleId: id, name: $("certName").value.trim() || "Free Apple Development" };
+  save(); renderCert();
+};
+$("certReset").onclick = function(){ S.cert = null; save(); renderCert(); };
+
+function fmtSize(b){ return (b / 1048576).toFixed(1) + " МБ"; }
+function baseName(n){ return n.replace(/\.ipa$/i, ""); }
+
+function pickFile(f){
+  if (!f) return;
+  if (!/\.ipa$/i.test(f.name)){ alert("Нужен файл с расширением .ipa"); return; }
+  S.file = f;
+  $("fileName").textContent = f.name;
+  $("fileSize").textContent = fmtSize(f.size);
+  $("fileRow").hidden = false;
+  syncSignBtn();
+}
+function syncSignBtn(){ $("signBtn").disabled = !(S.file && S.cert); }
+
+$("ipa").onchange = function(e){ pickFile(e.target.files[0]); };
+var drop = $("drop");
+["dragenter","dragover"].forEach(function(t){
+  drop.addEventListener(t, function(e){ e.preventDefault(); drop.classList.add("over"); });
+});
+["dragleave","drop"].forEach(function(t){
+  drop.addEventListener(t, function(e){ e.preventDefault(); drop.classList.remove("over"); });
+});
+drop.addEventListener("drop", function(e){ pickFile(e.dataTransfer.files[0]); });
+drop.addEventListener("keydown", function(e){
+  if (e.key === "Enter" || e.key === " "){ e.preventDefault(); $("ipa").click(); }
+});
+
+var STEP_TEXT = [
+  "Загрузка IPA…",
+  "Проверка сертификата Apple ID…",
+  "Подпись приложения…",
+  "Подготовка установки…",
+  "Готово к установке"
+];
+function setStep(i, done){
+  var li = $("steps").children;
+  for (var k = 0; k < li.length; k++){
+    li[k].className = k < i ? "done" : (k === i ? (done ? "done" : "active") : "");
+  }
+  $("barFill").style.width = Math.round(((done ? i + 1 : i) / li.length) * 100) + "%";
+  $("processHint").textContent = STEP_TEXT[Math.min(i, STEP_TEXT.length - 1)];
+}
+function runSign(name){
+  $("processCard").hidden = false;
+  $("installBtn").hidden = true;
+  setStep(0, false);
+  $("processCard").scrollIntoView({ behavior: "smooth", block: "center" });
+  var i = 0;
+  var t = setInterval(function(){
+    i++;
+    if (i >= 5){ clearInterval(t); setStep(4, true); finishSign(name); }
+    else setStep(i, false);
+  }, 900);
+}
+function finishSign(name){
+  var now = Date.now(), found = null;
+  for (var k = 0; k < S.apps.length; k++){ if (S.apps[k].name === name) found = S.apps[k]; }
+  if (found){ found.signed = now; found.expires = now + WEEK; }
+  else { S.apps.unshift({ name: name, signed: now, expires: now + WEEK }); }
+  save(); render();
+  var btn = $("installBtn");
+  btn.hidden = false;
+  btn.textContent = "Установить " + baseName(name);
+  btn.onclick = function(){ install(name); };
+}
+function install(name){
+  if (SIGN_ENDPOINT){
+    location.href = "itms-services://?action=download-manifest&url=" +
+      encodeURIComponent(SIGN_ENDPOINT + "/manifest/" + encodeURIComponent(name) + ".plist");
+  } else {
+    alert("Демо-режим: сервис подписи не подключён. Укажите SIGN_ENDPOINT в index.html, чтобы установка началась на iPhone.");
+  }
+}
+$("signBtn").onclick = function(){ runSign(S.file.name); };
+
+function daysLeft(a){ return Math.ceil((a.expires - Date.now()) / DAY); }
+function wordDays(n){
+  var a = Math.abs(n) % 100, b = a % 10;
+  if (a > 10 && a < 20) return "дней";
+  if (b > 1 && b < 5) return "дня";
+  if (b === 1) return "день";
+  return "дней";
+}
+function dateStr(ms){
+  return new Date(ms).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
+}
+
+function render(){
+  var pill = $("expPill"), d = $("daysLeft"), w = $("daysWord");
+  if (!S.apps.length){
+    d.textContent = "0"; d.appendChild(w);
+    w.textContent = "дней осталось";
+    pill.className = "pill idle"; pill.textContent = "нет подписей";
+    $("expMeta").textContent = "Подпишите первый IPA, чтобы увидеть дату окончания.";
+  } else {
+    var latest = S.apps.slice().sort(function(a, b){ return b.expires - a.expires; })[0];
+    var n = daysLeft(latest);
+    d.textContent = n > 0 ? String(n) : "0";
+    d.appendChild(w);
+    w.textContent = n > 0 ? wordDays(n) + " осталось" : "подпись истекла";
+    if (n <= 0){ pill.className = "pill bad"; pill.textContent = "истекла"; }
+    else if (n <= 2){ pill.className = "pill warn"; pill.textContent = "скоро истечёт"; }
+    else { pill.className = "pill ok"; pill.textContent = "активна"; }
+    $("expMeta").textContent = n > 0
+      ? "Действует до " + dateStr(latest.expires) + ". Затем подпишите заново."
+      : "Срок истёк " + dateStr(latest.expires) + ". Подпишите приложение заново.";
+  }
+
+  var list = $("appList");
+  list.innerHTML = "";
+  if (!S.apps.length){
+    var p = document.createElement("p");
+    p.className = "empty";
+    p.textContent = "Пока нет подписанных приложений.";
+    list.appendChild(p);
+    return;
+  }
+  S.apps.forEach(function(a){
+    var n = daysLeft(a);
+    var box = document.createElement("div");
+    box.className = "app";
+
+    var row = document.createElement("div");
+    row.className = "row";
+    var t = document.createElement("div");
+    t.className = "title";
+    t.textContent = baseName(a.name);
+    var st = document.createElement("span");
+    st.className = "pill " + (n <= 0 ? "bad" : (n <= 2 ? "warn" : "ok"));
+    st.textContent = n <= 0 ? "истекла" : n + " " + wordDays(n);
+    row.appendChild(t); row.appendChild(st);
+
+    var meta = document.createElement("p");
+    meta.className = "meta";
+    meta.style.margin = "0 0 12px";
+    meta.textContent = "Подписано " + dateStr(a.signed) + " · до " + dateStr(a.expires);
+
+    var b1 = document.createElement("button");
+    b1.className = "btn " + (n <= 0 ? "btn-primary" : "btn-ghost");
+    b1.textContent = n <= 0 ? "Подписать заново" : "Переподписать сейчас";
+    b1.onclick = function(){ runSign(a.name); };
+
+    var b2 = document.createElement("button");
+    b2.className = "btn btn-ghost";
+    b2.textContent = "Установить";
+    b2.onclick = function(){ install(a.name); };
+
+    box.appendChild(row);
+    box.appendChild(meta);
+    box.appendChild(b1);
+    box.appendChild(b2);
+    list.appendChild(box);
+  });
+}
+
+renderCert();
+render();
+setInterval(render, 60000);
+</script>
+</body>
+</html>
