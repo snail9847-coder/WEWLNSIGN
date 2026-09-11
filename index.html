@@ -107,14 +107,24 @@ footer{text-align:center;font-size:12px;color:var(--muted);padding:24px 0 0}
   </div>
 </header>
 
+<div class="note" id="iosNote" hidden style="margin-bottom:16px">
+  <p><b>На вашей iOS нужен установщик.</b> <span id="iosVerText"></span> TrollStore не работает, поэтому неподписанный IPA подписывает приложение-установщик на самом iPhone:</p>
+  <ol>
+    <li><b>ESign</b> — ставится без компьютера, подписывает загруженным сертификатом.</li>
+    <li><b>SideStore</b> — бесплатно вашим Apple ID, 7 дней; нужна однократная настройка pairing-файла с компьютера.</li>
+  </ol>
+  <p style="margin:8px 0 0">Если IPA уже подписан — установщик не нужен, работает прямая установка.</p>
+</div>
+
 <section class="card">
   <h2>Сертификат Apple ID</h2>
-  <p class="hint">Подпись выполняется на самом iPhone. Оставьте «Авто» — сайт сам подберёт установщик, который есть на устройстве.</p>
+  <p class="hint">Подпись выполняется на самом iPhone. Оставьте «Авто» — сайт сам подберёт способ установки.</p>
   <label for="appleId">Apple ID (необязательно)</label>
   <input id="appleId" type="email" inputmode="email" placeholder="name@example.com">
   <label for="installer">Способ установки</label>
   <select id="installer">
     <option value="auto">Авто (подобрать самому)</option>
+    <option value="ota">Прямая установка (уведомление iOS)</option>
     <option value="trollstore">TrollStore — без срока (iOS 14–17.0)</option>
     <option value="sidestore">SideStore — 7 дней</option>
     <option value="altstore">AltStore — 7 дней</option>
@@ -126,6 +136,13 @@ footer{text-align:center;font-size:12px;color:var(--muted);padding:24px 0 0}
   </div>
   <button class="btn btn-primary" id="certBtn">Сохранить и продолжить</button>
   <button class="btn btn-ghost" id="certReset" hidden>Сбросить</button>
+</section>
+
+<section class="card">
+  <h2>Файлы из репозитория</h2>
+  <p class="hint">Перекиньте .ipa в папку <b>ipa/</b> в GitHub-репозитории — файл появится здесь сам и ставится в одно нажатие.</p>
+  <div id="repoList"><p class="empty">Загрузка списка…</p></div>
+  <button class="btn btn-ghost btn-small" id="repoRefresh" style="margin-top:4px">Обновить список</button>
 </section>
 
 <section class="card">
@@ -160,7 +177,7 @@ footer{text-align:center;font-size:12px;color:var(--muted);padding:24px 0 0}
   <button class="btn btn-primary" id="installBtn" hidden style="margin-top:16px">Установить на iPhone</button>
   <p class="meta" id="installMeta" hidden style="margin-top:10px"></p>
   <div id="fallback" hidden style="margin-top:12px">
-    <p class="meta" style="margin-bottom:8px">Не открылось? Попробуйте конкретный установщик:</p>
+    <p class="meta" style="margin-bottom:8px">Не открылось? Попробуйте другой способ:</p>
     <div id="fallbackBtns"></div>
   </div>
 </section>
@@ -182,11 +199,12 @@ footer{text-align:center;font-size:12px;color:var(--muted);padding:24px 0 0}
 </section>
 
 <div class="note">
-  <p><b>Как это работает.</b> Сайт полностью статический: он передаёт IPA тому установщику, который есть на iPhone, и ведёт счёт 7 дней. Ни пароли, ни файлы никуда не отправляются.</p>
+  <p><b>Как это работает.</b> Сайт ведёт учёт подписей и сам запускает установку. Ни пароли, ни файлы никуда не отправляются.</p>
   <ol>
-    <li>iOS 14–17.0 и есть TrollStore — установка в одно нажатие и без срока действия.</li>
-    <li>Остальные версии iOS — SideStore, AltStore или ESign с вашим Apple ID, подпись на 7 дней.</li>
-    <li>Ссылка на IPA — установщик скачает и подпишет файл сам; локальный файл — через кнопку «Поделиться».</li>
+    <li><b>Перекиньте .ipa в папку ipa/ репозитория</b> — файл сам появится на сайте после деплоя Vercel, ссылки вставлять не надо.</li>
+    <li><b>Прямая установка (OTA).</b> iOS сама покажет уведомление «Установить «Имя»?» и поставит приложение на главный экран. Работает на любой iOS, если IPA уже подписан.</li>
+    <li><b>TrollStore</b> — iOS 14–17.0: установка без срока действия.</li>
+    <li><b>SideStore / AltStore / ESign</b> — если IPA не подписан: установщик подпишет его вашим Apple ID на 7 дней.</li>
   </ol>
 </div>
 
@@ -201,8 +219,93 @@ var SCHEMES = {
   altstore: { name: "AltStore", url: "altstore://install?url=", perm: false },
   esign: { name: "ESign", url: "esign://install?url=", perm: false }
 };
-var AUTO_ORDER = ["trollstore", "sidestore", "altstore", "esign"];
+var iosVer = (function(){
+  var m = navigator.userAgent.match(/OS (\d+)[._](\d+)/);
+  return m ? parseFloat(m[1] + "." + m[2]) : 0;
+})();
+var trollOk = !iosVer || iosVer <= 17.0;
+var AUTO_ORDER = trollOk
+  ? ["trollstore", "sidestore", "altstore", "esign"]
+  : ["esign", "sidestore", "altstore"];
 function $(id){ return document.getElementById(id); }
+
+var GH = { owner: "snail9847-coder", repo: "WEWLNSIGN", dir: "ipa", branch: "main" };
+
+function repoFileUrl(name){
+  return location.origin + "/" + GH.dir + "/" + encodeURIComponent(name);
+}
+function renderRepoList(items, err){
+  var box = $("repoList");
+  box.innerHTML = "";
+  if (err){
+    var e = document.createElement("p");
+    e.className = "empty";
+    e.textContent = err;
+    box.appendChild(e);
+    return;
+  }
+  if (!items.length){
+    var p = document.createElement("p");
+    p.className = "empty";
+    p.textContent = "В папке ipa/ пока нет файлов. Залейте туда .ipa через GitHub — Add file → Upload files.";
+    box.appendChild(p);
+    return;
+  }
+  items.forEach(function(f){
+    var row = document.createElement("div");
+    row.className = "app";
+    var head = document.createElement("div");
+    head.className = "row";
+    var t = document.createElement("div");
+    t.className = "title";
+    t.textContent = baseName(f.name);
+    var s = document.createElement("span");
+    s.className = "pill idle";
+    s.textContent = fmtSize(f.size);
+    head.appendChild(t); head.appendChild(s);
+    var b = document.createElement("button");
+    b.className = "btn btn-primary";
+    b.textContent = "Установить «" + baseName(f.name) + "»";
+    b.onclick = function(){ runSign({ name: f.name, url: repoFileUrl(f.name) }); };
+    row.appendChild(head);
+    row.appendChild(b);
+    box.appendChild(row);
+  });
+}
+function loadRepoApps(){
+  var api = "https://api.github.com/repos/" + GH.owner + "/" + GH.repo +
+    "/contents/" + GH.dir + "?ref=" + GH.branch;
+  fetch(api, { headers: { Accept: "application/vnd.github+json" } })
+    .then(function(r){
+      if (r.status === 404){ renderRepoList([]); return null; }
+      if (!r.ok) throw new Error("http " + r.status);
+      return r.json();
+    })
+    .then(function(list){
+      if (!list) return;
+      var ipas = (Array.isArray(list) ? list : []).filter(function(f){
+        return f.type === "file" && /\.ipa$/i.test(f.name);
+      });
+      renderRepoList(ipas);
+    })
+    .catch(function(){
+      renderRepoList([], "Не удалось получить список. Проверьте интернет или нажмите «Обновить список».");
+    });
+}
+
+function bundleId(name){
+  var slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "") || "app";
+  return "com.wewlnsign." + slug;
+}
+function otaUrl(item){
+  var n = item.name.replace(/\.ipa$/i, "");
+  var manifest = location.origin + "/api/manifest?ipa=" + encodeURIComponent(item.url) +
+    "&name=" + encodeURIComponent(n) + "&bundle=" + encodeURIComponent(bundleId(n));
+  return "itms-services://?action=download-manifest&url=" + encodeURIComponent(manifest);
+}
+function canOta(item){
+  return !!item.url && /^https:\/\//i.test(item.url) && location.protocol === "https:";
+}
 
 var S = {
   cert: JSON.parse(localStorage.getItem("wewln_cert") || "null"),
@@ -214,7 +317,11 @@ function save(){
   localStorage.setItem("wewln_apps", JSON.stringify(S.apps));
 }
 function mode(){ return (S.cert && S.cert.installer) || $("installer").value || "auto"; }
-function modeName(m){ return m === "auto" ? "установщик" : SCHEMES[m].name; }
+function modeName(m){
+  if (m === "auto") return "установщик";
+  if (m === "ota") return "прямая установка iOS";
+  return SCHEMES[m].name;
+}
 
 function renderCert(){
   var pill = $("certPill");
@@ -222,7 +329,7 @@ function renderCert(){
     $("appleId").value = S.cert.appleId || "";
     $("installer").value = S.cert.installer;
     pill.className = "pill ok";
-    pill.textContent = S.cert.installer === "auto" ? "авто" : SCHEMES[S.cert.installer].name;
+    pill.textContent = modeName(S.cert.installer);
     $("certBtn").textContent = "Обновить настройки";
     $("certReset").hidden = false;
   } else {
@@ -315,8 +422,10 @@ function finishSign(item){
   btn.hidden = false;
   meta.hidden = false;
   if (item.url){
-    btn.textContent = "Установить на iPhone";
-    meta.textContent = "Откроется " + modeName(m) + ": он скачает IPA, подпишет и установит приложение.";
+    btn.textContent = "Установить «" + baseName(item.name) + "»";
+    meta.textContent = canOta(item) && (m === "ota" || m === "auto")
+      ? "iOS покажет уведомление «Установить «" + baseName(item.name) + "»?» — нажмите «Установить», и иконка появится на главном экране."
+      : "Откроется " + modeName(m) + ": он скачает IPA, подпишет и установит приложение.";
   } else {
     btn.textContent = "Передать IPA в установщик";
     meta.textContent = "В меню «Поделиться» выберите установщик — он подпишет и установит файл.";
@@ -330,6 +439,13 @@ function openScheme(key, url){
 function showFallback(url){
   var box = $("fallbackBtns");
   box.innerHTML = "";
+  if (/^https:\/\//i.test(url) && location.protocol === "https:"){
+    var ob = document.createElement("button");
+    ob.className = "btn btn-ghost btn-small";
+    ob.textContent = "Прямая установка (iOS)";
+    ob.onclick = function(){ location.href = otaUrl({ name: "app.ipa", url: url }); };
+    box.appendChild(ob);
+  }
   AUTO_ORDER.forEach(function(key){
     var b = document.createElement("button");
     b.className = "btn btn-ghost btn-small";
@@ -341,6 +457,15 @@ function showFallback(url){
 }
 function install(item){
   var m = mode();
+  if ((m === "ota" || m === "auto") && canOta(item)){
+    location.href = otaUrl(item);
+    showFallback(item.url);
+    return;
+  }
+  if (m === "ota" && item.url && location.protocol !== "https:"){
+    alert("Прямая установка работает только с размещённого сайта по https (например на Vercel).");
+    return;
+  }
   if (item.url){
     if (m === "auto"){
       var i = 0;
@@ -467,6 +592,15 @@ function render(){
   });
 }
 
+if (!trollOk){
+  var tsOpt = document.querySelector('#installer option[value="trollstore"]');
+  if (tsOpt) tsOpt.remove();
+  $("iosVerText").textContent = "Обнаружена iOS " + iosVer + " — на ней";
+  $("iosNote").hidden = false;
+  if (S.cert && S.cert.installer === "trollstore"){ S.cert.installer = "auto"; save(); }
+}
+$("repoRefresh").onclick = loadRepoApps;
+loadRepoApps();
 renderCert();
 render();
 setInterval(render, 60000);
